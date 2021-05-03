@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "736796117779",
+    "project_id": "riderapp-c328c",
+    "storage_bucket": "riderapp-c328c.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:736796117779:android:725c0cc240a7e03fe768e6",
+        "android_client_info": {
+          "package_name": "com.example.riderapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "736796117779-sb263r87j8v0u4d1rr1sb3g7ck8dafki.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyApu27Cg4BlUX_AsIJ6aM_N4etHTORozUQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "736796117779-sb263r87j8v0u4d1rr1sb3g7ck8dafki.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
