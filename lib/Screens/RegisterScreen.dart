@@ -3,23 +3,35 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:rider_app/Screens/LoginScreen.dart';
 import 'package:rider_app/Screens/MainScreen.dart';
+import 'package:rider_app/Widgets/ProgressDialog.dart';
 import 'package:rider_app/main.dart';
 
 class RegistrationScreen extends StatelessWidget {
   static const String screenId = "Register";
-  final TextEditingController nameTextEditingController = TextEditingController();
-  final TextEditingController emailTextEditingController = TextEditingController();
-  final TextEditingController phoneTextEditingController = TextEditingController();
-  final TextEditingController passwordTextEditingController = TextEditingController();
+  final TextEditingController nameTextEditingController =
+      TextEditingController();
+  final TextEditingController emailTextEditingController =
+      TextEditingController();
+  final TextEditingController phoneTextEditingController =
+      TextEditingController();
+  final TextEditingController passwordTextEditingController =
+      TextEditingController();
 
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
 
   void registerNewUser(BuildContext context) async {
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return ProgressDialog(message: "Registering. PLease wait..");
+        });
+
     final User firebaseUser = (await _firebaseAuth
             .createUserWithEmailAndPassword(
                 email: emailTextEditingController.text,
                 password: passwordTextEditingController.text)
             .catchError((error) {
+      Navigator.pop(context);
       Fluttertoast.showToast(msg: "Error: " + error.toString());
     }))
         .user;
@@ -38,6 +50,7 @@ class RegistrationScreen extends StatelessWidget {
       Navigator.pushNamedAndRemoveUntil(
           context, MainScreen.screenId, (route) => false);
     } else {
+      Navigator.pop(context);
       Fluttertoast.showToast(
           msg:
               "There was some error in registering the user. Please try again later.");
