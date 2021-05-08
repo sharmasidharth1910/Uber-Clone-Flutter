@@ -4,8 +4,12 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
 import 'package:rider_app/Assistants/AssistantMethods.dart';
+import 'package:rider_app/DataHandler/AppData.dart';
+import 'package:rider_app/Screens/SearchScreen.dart';
 import 'package:rider_app/Widgets/Divider.dart';
+import 'package:rider_app/Widgets/ProgressDialog.dart';
 
 class MainScreen extends StatefulWidget {
   static const String screenId = "MainScreen";
@@ -28,7 +32,7 @@ class _MainScreenState extends State<MainScreen> {
   Position currentPosition;
   double bottomPaddingOfMap = 0.0;
 
-  void locatePosition() async {
+  Future<void> locatePosition() async {
     Position position = await Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );
@@ -45,6 +49,7 @@ class _MainScreenState extends State<MainScreen> {
 
     String address = await AssistantMethods.searchCoordinateAddress(
       position: position,
+      context: context,
     );
     print("Result from getAddress : " + address);
   }
@@ -238,34 +243,43 @@ class _MainScreenState extends State<MainScreen> {
                     SizedBox(
                       height: 20.0,
                     ),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(5.0),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black54,
-                            blurRadius: 6.0,
-                            spreadRadius: 0.5,
-                            offset: Offset(0.7, 0.7),
-                          ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.search,
-                              color: Colors.blueAccent,
-                            ),
-                            SizedBox(
-                              width: 10.0,
-                            ),
-                            Text(
-                              "Search drop off",
+                    GestureDetector(
+                      onTap: () async {
+                        var res = await Navigator.pushNamed(
+                            context, SearchScreen.screenId);
+                        if (res == "obtainDirection") {
+                          await getPlaceDirection();
+                        }
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(5.0),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black54,
+                              blurRadius: 6.0,
+                              spreadRadius: 0.5,
+                              offset: Offset(0.7, 0.7),
                             ),
                           ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.search,
+                                color: Colors.blueAccent,
+                              ),
+                              SizedBox(
+                                width: 10.0,
+                              ),
+                              Text(
+                                "Search drop off",
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -284,7 +298,12 @@ class _MainScreenState extends State<MainScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Add Home"),
+                            Text(Provider.of<AppData>(context).pickUpLocation !=
+                                    null
+                                ? Provider.of<AppData>(context)
+                                    .pickUpLocation
+                                    .placeName
+                                : "Add Home"),
                             SizedBox(
                               height: 4.0,
                             ),
@@ -341,5 +360,29 @@ class _MainScreenState extends State<MainScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> getPlaceDirection() async {
+    var initialPos =
+        Provider.of<AppData>(context, listen: false).pickUpLocation;
+
+    var finalPos = Provider.of<AppData>(context, listen: false).dropOffLocation;
+
+    var pickUpLatLng = LatLng(initialPos.latitude, initialPos.longitude);
+    var dropOffLatLng = LatLng(finalPos.latitude, finalPos.longitude);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) =>
+          ProgressDialog(message: "Please wait.."),
+    );
+
+    var details = await AssistantMethods.obtainPlaceDirectionDetails(
+      initialPosition: pickUpLatLng,
+      finalPosition: dropOffLatLng,
+    );
+
+    Navigator.pop(context);
+    print("Result from direction function :  :  " + details.encodedPoints);
   }
 }
