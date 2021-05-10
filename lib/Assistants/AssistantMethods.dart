@@ -1,3 +1,5 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter/foundation.dart';
@@ -8,6 +10,7 @@ import 'package:rider_app/Credentials/ConfigMaps.dart';
 import 'package:rider_app/DataHandler/AppData.dart';
 import 'package:rider_app/Models/Address.dart';
 import 'package:rider_app/Models/DirectionDetails.dart';
+import 'package:rider_app/Models/Users.dart';
 
 class AssistantMethods {
   static Future<String> searchCoordinateAddress({
@@ -82,5 +85,18 @@ class AssistantMethods {
     //In Rupees
     double finalAmount = (totalAmount * 78);
     return finalAmount.truncate();
+  }
+
+  static void getCurrentUserInfo() async {
+    firebaseUser = FirebaseAuth.instance.currentUser;
+    String userId = firebaseUser.uid;
+    DatabaseReference reference =
+        FirebaseDatabase.instance.reference().child("users").child(userId);
+
+    reference.once().then((DataSnapshot dataSnapshot) {
+      if (dataSnapshot.value != null) {
+        currentUserInfo = Users.fromSnapshot(dataSnapshot);
+      }
+    });
   }
 }
