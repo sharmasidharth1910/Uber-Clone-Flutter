@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:animated_text_kit/animated_text_kit.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -8,8 +11,10 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:rider_app/Assistants/AssistantMethods.dart';
+import 'package:rider_app/Credentials/ConfigMaps.dart';
 import 'package:rider_app/DataHandler/AppData.dart';
 import 'package:rider_app/Models/DirectionDetails.dart';
+import 'package:rider_app/Screens/LoginScreen.dart';
 import 'package:rider_app/Screens/SearchScreen.dart';
 import 'package:rider_app/Widgets/Divider.dart';
 import 'package:rider_app/Widgets/ProgressDialog.dart';
@@ -27,6 +32,13 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     zoom: 14.4746,
   );
 
+  @override
+  void initState() {
+    super.initState();
+
+    AssistantMethods.getCurrentUserInfo();
+  }
+
   Completer<GoogleMapController> _controllerGoogleMap = Completer();
   GoogleMapController _googleMapController;
 
@@ -43,9 +55,73 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   Set<Circle> circlesSet = {};
 
   double rideDetailsContainerHeight = 0;
+  double requestRideContainerHeight = 0;
   double searchContainerHeight = 300.0;
 
   bool drawerOpen = true;
+
+  List<MaterialColor> colorizeColors = const [
+    Colors.green,
+    Colors.purple,
+    Colors.pink,
+    Colors.blue,
+    Colors.yellow,
+    Colors.red,
+  ];
+
+  TextStyle colorizeTextStyle = const TextStyle(
+    fontSize: 55.0,
+    fontFamily: 'Signatra',
+  );
+
+  DatabaseReference rideRequestRef;
+
+  void saveRideRequest() {
+    rideRequestRef =
+        FirebaseDatabase.instance.reference().child("Ride Requests").push();
+
+    var pickUp = Provider.of<AppData>(context, listen: false).pickUpLocation;
+    var dropOff = Provider.of<AppData>(context, listen: false).dropOffLocation;
+
+    Map<String, String> pickUpLocMap = {
+      "latitude": pickUp.latitude.toString(),
+      "longitude": pickUp.longitude.toString(),
+    };
+
+    Map<String, String> dropOffLocMap = {
+      "latitude": dropOff.latitude.toString(),
+      "longitude": dropOff.longitude.toString(),
+    };
+
+    Map rideInfoMap = {
+      "driver_id": "waiting",
+      "payment_method": "cash",
+      "pickup": pickUpLocMap,
+      "dropoff": dropOffLocMap,
+      "created_at": DateTime.now().toString(),
+      "rider_name": currentUserInfo.name,
+      "rider_phone": currentUserInfo.phone,
+      "pickup_address": pickUp.placeName,
+      "dropoff_address": dropOff.placeName,
+    };
+
+    rideRequestRef.set(rideInfoMap);
+  }
+
+  void cancelRideRequest() {
+    rideRequestRef.remove();
+  }
+
+  void displayRequestRideContainer() {
+    setState(() {
+      requestRideContainerHeight = 250.0;
+      rideDetailsContainerHeight = 0;
+      bottomPaddingOfMap = 230.0;
+      drawerOpen = true;
+    });
+
+    saveRideRequest();
+  }
 
   void resetApp() {
     setState(() {
@@ -53,6 +129,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       searchContainerHeight = 300.0;
       rideDetailsContainerHeight = 0;
       bottomPaddingOfMap = 230.0;
+      requestRideContainerHeight = 0.0;
 
       polyLineSet.clear();
       markersSet.clear();
@@ -175,6 +252,25 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                   "About",
                   style: TextStyle(
                     fontSize: 15.0,
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  FirebaseAuth.instance.signOut();
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    LoginScreen.screenId,
+                    (route) => false,
+                  );
+                },
+                child: ListTile(
+                  leading: Icon(Icons.info),
+                  title: Text(
+                    "Sign Out",
+                    style: TextStyle(
+                      fontSize: 15.0,
+                    ),
                   ),
                 ),
               ),
@@ -529,7 +625,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                         padding: EdgeInsets.symmetric(horizontal: 16.0),
                         child: ElevatedButton(
                           onPressed: () {
-                            print("Clicked........");
+                            displayRequestRideContainer();
                           },
                           child: Container(
                             color: Theme.of(context).accentColor,
@@ -560,6 +656,106 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                       ),
                     ],
                   ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 0.0,
+            left: 0.0,
+            right: 0.0,
+            child: Container(
+              height: requestRideContainerHeight,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(16.0),
+                  topRight: Radius.circular(16.0),
+                ),
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    spreadRadius: 0.5,
+                    blurRadius: 16.0,
+                    color: Colors.black54,
+                    offset: Offset(0.7, 0.7),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(30.0),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      height: 12.0,
+                    ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: AnimatedTextKit(
+                        animatedTexts: [
+                          ColorizeAnimatedText(
+                            'Requesting a Ride...',
+                            textStyle: colorizeTextStyle,
+                            colors: colorizeColors,
+                            textAlign: TextAlign.center,
+                          ),
+                          ColorizeAnimatedText(
+                            'Please Wait...',
+                            textStyle: colorizeTextStyle,
+                            colors: colorizeColors,
+                            textAlign: TextAlign.center,
+                          ),
+                          ColorizeAnimatedText(
+                            'Finding a Driver...',
+                            textStyle: colorizeTextStyle,
+                            colors: colorizeColors,
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                        isRepeatingAnimation: true,
+                        onTap: () {
+                          print("Tap Event");
+                        },
+                      ),
+                    ),
+                    SizedBox(
+                      height: 22.0,
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        cancelRideRequest();
+                        resetApp();
+                      },
+                      child: Container(
+                        height: 60.0,
+                        width: 60.0,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(26.0),
+                          border: Border.all(
+                            width: 2.0,
+                            color: Colors.grey[300],
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.close,
+                          size: 26.0,
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      height: 10.0,
+                    ),
+                    Container(
+                      width: double.infinity,
+                      child: Text(
+                        "Cancel Ride",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12.0,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
