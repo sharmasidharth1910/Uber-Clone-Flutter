@@ -5,15 +5,18 @@ import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_geofire/flutter_geofire.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:rider_app/Assistants/AssistantMethods.dart';
+import 'package:rider_app/Assistants/GeoFireAssistants.dart';
 import 'package:rider_app/Credentials/ConfigMaps.dart';
 import 'package:rider_app/DataHandler/AppData.dart';
 import 'package:rider_app/Models/DirectionDetails.dart';
+import 'package:rider_app/Models/NearByAvailableDrivers.dart';
 import 'package:rider_app/Screens/LoginScreen.dart';
 import 'package:rider_app/Screens/SearchScreen.dart';
 import 'package:rider_app/Widgets/Divider.dart';
@@ -59,6 +62,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   double searchContainerHeight = 300.0;
 
   bool drawerOpen = true;
+  bool nearByAvailableDriverKeysLoaded = false;
 
   List<MaterialColor> colorizeColors = const [
     Colors.green,
@@ -170,6 +174,81 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       context: context,
     );
     print("Result from getAddress : " + address);
+
+    initGeoFirListener();
+  }
+
+  void initGeoFirListener() {
+    Geofire.initialize("availableDrivers");
+
+    Geofire.queryAtLocation(
+            currentPosition.latitude, currentPosition.longitude, 10)
+        .listen((map) {
+      print(map);
+      if (map != null) {
+        var callBack = map['callBack'];
+
+        switch (callBack) {
+          case Geofire.onKeyEntered:
+            NearByDrivers nearByDrivers = NearByDrivers();
+            nearByDrivers.key = map['key'];
+            nearByDrivers.latitude = map['latitude'];
+            nearByDrivers.longitude = map['longitude'];
+            GeoFireAssistants.nearbyAvailableDriversList.add(nearByDrivers);
+            if (nearByAvailableDriverKeysLoaded == true) {
+              updateAvailableDriversOnMap();
+            }
+            break;
+
+          case Geofire.onKeyExited:
+            GeoFireAssistants.removeDriverFromList(map['key']);
+            updateAvailableDriversOnMap();
+            break;
+
+          case Geofire.onKeyMoved:
+            NearByDrivers nearByDrivers = NearByDrivers();
+            nearByDrivers.key = map['key'];
+            nearByDrivers.latitude = map['latitude'];
+            nearByDrivers.longitude = map['longitude'];
+            GeoFireAssistants.updateDriverNearbyLocation(nearByDrivers);
+            updateAvailableDriversOnMap();
+            break;
+
+          case Geofire.onGeoQueryReady:
+            updateAvailableDriversOnMap();
+            break;
+        }
+      }
+    });
+  }
+
+  void updateAvailableDriversOnMap() {
+    setState(() {
+      markersSet.clear();
+    });
+
+    Set<Marker> tMarkers = Set<Marker>();
+
+    for (NearByDrivers drivers
+        in GeoFireAssistants.nearbyAvailableDriversList) {
+      LatLng availableDriversPosition = LatLng(
+        drivers.latitude,
+        drivers.longitude,
+      );
+
+      Marker marker = Marker(
+        markerId: MarkerId('driver${drivers.key}'),
+        position: availableDriversPosition,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
+        rotation: AssistantMethods.createRandomNumber(360),
+      );
+
+      tMarkers.add(marker);
+    }
+
+    setState(() {
+      markersSet = tMarkers;
+    });
   }
 
   @override
