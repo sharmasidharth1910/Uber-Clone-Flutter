@@ -64,6 +64,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   bool drawerOpen = true;
   bool nearByAvailableDriverKeysLoaded = false;
 
+  BitmapDescriptor nearByIcon;
+
   List<MaterialColor> colorizeColors = const [
     Colors.green,
     Colors.purple,
@@ -239,7 +241,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       Marker marker = Marker(
         markerId: MarkerId('driver${drivers.key}'),
         position: availableDriversPosition,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
+        icon: nearByIcon,
         rotation: AssistantMethods.createRandomNumber(360),
       );
 
@@ -251,8 +253,24 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     });
   }
 
+  void createIconMarker() {
+    if (nearByIcon == null) {
+      ImageConfiguration imageConfiguration = createLocalImageConfiguration(
+        context,
+        size: Size(2, 2),
+      );
+      BitmapDescriptor.fromAssetImage(
+        imageConfiguration,
+        "images/car_ios.png",
+      ).then((value) {
+        nearByIcon = value;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    createIconMarker();
     return Scaffold(
       key: scaffoldKey,
       appBar: AppBar(
