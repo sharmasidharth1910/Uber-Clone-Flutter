@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/cupertino.dart';
@@ -98,5 +100,11 @@ class AssistantMethods {
         currentUserInfo = Users.fromSnapshot(dataSnapshot);
       }
     });
+  }
+
+  static double createRandomNumber(int number) {
+    var random = Random();
+    int radNumber = random.nextInt(number);
+    return radNumber.toDouble();
   }
 }
